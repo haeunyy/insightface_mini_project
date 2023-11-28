@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>출결관리 프로그램</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        #header {
+            text-align: center;
+            background-color: #333;
+            color: #fff;
+            padding: 15px;
+        }
+
+        #container {
+            max-width: 400px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        form {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 5px;
+        }
+
+        input {
+            padding: 7px;
+            margin-bottom: 17px;
+            box-sizing: border-box;
+        }
+
+        button#regist_btn {
+            padding: 11px;
+        }
+        
+        #login_button {
+            margin-top: 9px;
+            padding: 13px;
+            width: 400px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+            background-color: royalblue;
+            border: none;
+            border-radius: 3px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        input[type="submit"] {
+            background-color: #333;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        #webcam-container {
+            margin-top: 20px;
+            width: 100%;
+            height: 250px;
+            border: 5px #333 solid;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: rotateY(180deg);
+            -webkit-transform:rotateY(180deg); /* Safari and Chrome */
+            -moz-transform:rotateY(180deg); /* Firefox */
+        }
+
+        #tost_btn {
+            display: block;
+            margin: 40px auto;
+            padding: 10px 20px;
+            background-color: royalblue;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #login_button:hover {
+            box-shadow: 3px 4px 11px 0px #00000040;
+        }
+
+        /*토스트 메시지*/
+        #tost_message {
+            opacity: 0;
+            position: fixed;
+            bottom: -100px;
+            left: 50%;
+            transform: translate(-50%,0);
+            padding: 10px 50px;
+            background: rgba(0, 0, 0, 0.70);
+            border-radius: 50px;
+            color: #fff;
+            box-shadow: 3px 4px 11px 0px #00000040;
+            transition: all 0.5s;
+        }
+        /*토스트 메시지 활성화 되었을 때*/
+        #tost_message.active {
+            opacity: 100%;
+            bottom: 50px;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>얼굴인식 출결관리</h1>
+    </div>
+
+    <div id="container">
+        <form id="regist_btn" action="regist" method="post">
+            <label for="name">이름:</label>
+            <input type="text" id="name" name="name">
+            <label for="phone">연락처:</label>
+            <input type="text" id="phone" name="phone">
+            <button type="submit" id="regist_btn">회원가입</button>
+        </form>
+        <button id="login_button">로그인</button><br>
+        <div id="webcam-container">
+            <video autoplay="true" id="video"></video>
+            <canvas id="canvas" style="display: none;"></canvas>
+        </div>
+    </div>
+
+    <script>
+    // 웹캠을 활성화하고 비디오 요소에 스트림을 연결
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(function(stream) {
+            var video = document.getElementById('video');
+            video.srcObject = stream;
+        })
+        .catch(function(err) {
+            console.error('웹캠을 사용할 수 없습니다.', err);
+        });
+
+    document.getElementById('login_button').addEventListener('click', (e)=> {
+
+        e.preventDefault();
+        var canvas = document.getElementById('canvas');
+
+        // 캔버스에 현재 비디오 프레임을 복사
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // 캔버스의 데이터를 이미지로 설정
+        var imgData = canvas.toDataURL('image/png');
+
+        // 데이터를 Blob으로 변환
+        var blobData = dataURItoBlob(imgData);
+
+        // FormData를 사용하여 이미지를 서버에 전송
+        var formData = new FormData();
+        formData.append('file', blobData, 'captured_image.png');
+
+
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then((response) => 
+            response.json())
+        .then(data => {
+            console.log(data)
+            if (data) {
+                let result = data.user+'님 등록되었습니다.'
+                tostOn(result)
+            }
+        })
+        .catch(error => {
+            console.log(error)
+            if (error) {
+                let result = '다시 시도해주세요.'
+                tostOn(result)
+            }
+        });
+        });
+
+
+
+    document.getElementById('regist_btn').addEventListener('click', function(e) {
+        
+        // 캔버스에 현재 비디오 프레임을 복사
+        var canvas = document.getElementById('canvas');
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // 캔버스의 데이터를 이미지로 설정
+        var imgData = canvas.toDataURL('image/png');
+        var blobData = dataURItoBlob(imgData);
+        
+        // FormData를 사용하여 이미지를 서버에 전송
+        var form_Data = new FormData();
+
+        e.preventDefault();
+        form_Data.append('file', blobData, 'captured_image.png');
+        form_Data.append('name', document.getElementById('name').value);  
+        form_Data.append('phone', document.getElementById('phone').value);
+
+
+        fetch('/regist', {
+            method: 'POST',
+            body: form_Data
+        })
+        .then((response) => response.json())
+        .then(data => {
+            // alert(data)
+            console.log(data)
+            if (data) {
+                let result = data.user+'님 등록되었습니다.'
+                tostOn(result)
+            }
+        })
+        .catch(error => {
+            console.error(':', error);
+            if (error) {
+                let result = '다시 시도해주세요.'
+                tostOn(result)
+            }
+        });
+    });
+
+    // Data URI를 Blob으로 변환하는 함수
+    function dataURItoBlob(dataURI) {
+
+        var byteString = atob(dataURI.split(',')[1]);
+        var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+        var ab = new ArrayBuffer(byteString.length);
+        var ia = new Uint8Array(ab);
+        for (var i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        return new Blob([ab], { type: mimeString });
+    }
+
+    // var tostMessage = document.getElementById('tost_message');
+    function tostOn(result){
+        var newDiv = document.createElement('div');
+        newDiv.id = 'tost_message';
+
+        // 생성된 div에 텍스트 추가
+        var newText = document.createTextNode(result);
+        newDiv.appendChild(newText);
+
+        // 생성된 div에 스타일 추가 (예: 배경색, 패딩 등)
+        newDiv.style.backgroundColor = 'rgb(225, 65, 65)';
+        newDiv.style.padding = '10px';
+        newDiv.style.alignContent = 'center'
+
+        // 생성된 div를 문서의 특정 위치에 추가 (여기서는 body의 끝에 추가)
+        document.body.appendChild(newDiv);
+        
+        //2. 토스트 메시지 노출-사라짐 함수 작성
+        newDiv.classList.add('active');
+        // console.log(data)
+        setTimeout(function(){
+            newDiv.classList.remove('active');
+        },3000);
+    }
+
+
+                
+
+
+    </script>
+</body>
+</html>
