@@ -18,6 +18,6 @@ class Working_hour(Base):
     __tablename__ = 'working_hour'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('user_info.id'))
+    mem_id = Column(Integer, ForeignKey('user_info.id'))
     start_time = Column(TEXT)
-    quit_time = Column(TEXT)
+    quit_time = Column(TEXT, default=None)

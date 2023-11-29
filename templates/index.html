@@ -45,16 +45,31 @@
         }
 
         button#regist_btn {
+            margin-top: 16px;
             padding: 11px;
         }
         
         #login_button {
-            margin-top: 9px;
+            margin-top: 10px;
             padding: 13px;
             width: 400px;
             margin-bottom: 8px;
             box-sizing: border-box;
-            background-color: royalblue;
+            background-color: rgba(65, 105, 225, 0.76);
+            border: none;
+            border-radius: 3px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #exit_button{
+            margin-top: 3px;
+            padding: 13px;
+            width: 400px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+            background-color: rgba(255, 30, 0, 0.712);
             border: none;
             border-radius: 3px;
             color: #fff;
@@ -130,20 +145,21 @@
 
     <div id="container">
         <form id="regist_btn" action="regist" method="post">
-            <label for="name">이름:</label>
+            <label for="name">Name:</label>
             <input type="text" id="name" name="name">
-            <label for="phone">연락처:</label>
+            <label for="phone">Phone:</label>
             <input type="text" id="phone" name="phone">
             <button type="submit" id="regist_btn">회원가입</button>
         </form>
         <button id="login_button">로그인</button><br>
+        <button id="exit_button">퇴근</button><br>
         <div id="webcam-container">
             <video autoplay="true" id="video"></video>
             <canvas id="canvas" style="display: none;"></canvas>
         </div>
     </div>
-
     <script>
+
     // 웹캠을 활성화하고 비디오 요소에 스트림을 연결
     navigator.mediaDevices.getUserMedia({ video: true })
         .then(function(stream) {
@@ -154,24 +170,20 @@
             console.error('웹캠을 사용할 수 없습니다.', err);
         });
 
-    document.getElementById('login_button').addEventListener('click', (e)=> {
 
+
+        // 로그인 기능
+        document.getElementById('login_button').addEventListener('click', (e)=> {
         e.preventDefault();
+
         var canvas = document.getElementById('canvas');
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height); // 캔버스에 현재 비디오 프레임을 복사
 
-        // 캔버스에 현재 비디오 프레임을 복사
-        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        // 캔버스의 데이터를 이미지로 설정
-        var imgData = canvas.toDataURL('image/png');
-
-        // 데이터를 Blob으로 변환
-        var blobData = dataURItoBlob(imgData);
-
-        // FormData를 사용하여 이미지를 서버에 전송
-        var formData = new FormData();
+        var imgData = canvas.toDataURL('image/png'); // 캔버스의 데이터를 이미지로 설정
+        var blobData = dataURItoBlob(imgData); // 데이터를 Blob으로 변환
+        
+        var formData = new FormData(); // FormData를 사용하여 이미지를 서버에 전송
         formData.append('file', blobData, 'captured_image.png');
-
 
         fetch('/upload', {
             method: 'POST',
@@ -180,16 +192,14 @@
         .then((response) => 
             response.json())
         .then(data => {
-            console.log(data)
             if (data) {
-                let result = data.user+'님 등록되었습니다.'
+                let result = data.user+'님 출근 등록되었습니다.'
                 tostOn(result)
             }
         })
         .catch(error => {
-            console.log(error)
+            let result = '다시 시도해주세요.'
             if (error) {
-                let result = '다시 시도해주세요.'
                 tostOn(result)
             }
         });
@@ -222,17 +232,51 @@
         })
         .then((response) => response.json())
         .then(data => {
-            // alert(data)
-            console.log(data)
             if (data) {
                 let result = data.user+'님 등록되었습니다.'
                 tostOn(result)
             }
         })
         .catch(error => {
-            console.error(':', error);
+            let result = '다시 시도해주세요.'
             if (error) {
-                let result = '다시 시도해주세요.'
+                tostOn(result)
+            }
+        });
+    });
+
+
+    document.getElementById('exit_button').addEventListener('click', function(e) {
+        
+        // 캔버스에 현재 비디오 프레임을 복사
+        var canvas = document.getElementById('canvas');
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // 캔버스의 데이터를 이미지로 설정
+        var imgData = canvas.toDataURL('image/png');
+        var blobData = dataURItoBlob(imgData);
+        
+        // FormData를 사용하여 이미지를 서버에 전송
+        var form_Data = new FormData();
+
+        e.preventDefault();
+        form_Data.append('file', blobData, 'captured_image.png');
+
+        fetch('/exit', {
+            method: 'POST',
+            body: form_Data
+        })
+        .then((response) => response.json())
+        .then(data => {
+            console.log(data)
+            if (data) {
+                let result = data.user+'님 퇴근 등록되었습니다.'
+                tostOn(result)
+            }
+        })
+        .catch(error => {
+            let result = '다시 시도해주세요.'
+            if (error) {
                 tostOn(result)
             }
         });
@@ -270,7 +314,6 @@
         
         //2. 토스트 메시지 노출-사라짐 함수 작성
         newDiv.classList.add('active');
-        // console.log(data)
         setTimeout(function(){
             newDiv.classList.remove('active');
         },3000);
